@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import registrationRoutes from './routes/registration.routes';
 
 const app = express();
 
@@ -15,5 +16,8 @@ app.get('/health', (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({ message: 'Kattunar Kuzhu API' });
 });
+
+// API routes
+app.use('/api/registrations', registrationRoutes);
 
 export default app;
