@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { User } from '../models/User';
+import { Business } from '../models/Business';
 
 export async function createOrUpdateRegistration(req: Request, res: Response) {
   try {
@@ -32,13 +33,13 @@ export async function createOrUpdateRegistration(req: Request, res: Response) {
       email: business.email ? String(business.email).trim() : undefined,
     };
 
-    const writeRes = await User.updateOne(
+    // Upsert personal info into users
+    const userWriteRes = await User.updateOne(
       { firebaseUid },
       {
         $set: {
           firebaseUid,
           personal: normalizedPersonal,
-          business: normalizedBusiness,
           status: 'pending',
         },
         $setOnInsert: {
@@ -48,10 +49,47 @@ export async function createOrUpdateRegistration(req: Request, res: Response) {
       { upsert: true }
     );
 
-    const created = (writeRes as any).upsertedCount && (writeRes as any).upsertedCount > 0;
-    const doc = await User.findOne({ firebaseUid });
+    // Ensure we have userId to reference from business
+    const userDoc = await User.findOne({ firebaseUid });
 
-    return res.status(created ? 201 : 200).json({ registration: doc });
+    // Upsert business info into businesses
+    await Business.updateOne(
+      { firebaseUid },
+      {
+        $set: {
+          firebaseUid,
+          name: normalizedBusiness.name,
+          category: normalizedBusiness.category,
+          phone: normalizedBusiness.phone,
+          email: normalizedBusiness.email,
+          location: normalizedBusiness.location,
+          userId: userDoc?._id,
+        },
+      },
+      { upsert: true }
+    );
+
+    const created = (userWriteRes as any).upsertedCount && (userWriteRes as any).upsertedCount > 0;
+    const bizDoc = await Business.findOne({ firebaseUid });
+
+    // Merge for response
+    const response = {
+      firebaseUid,
+      personal: userDoc?.personal,
+      business: bizDoc
+        ? {
+            name: bizDoc.name,
+            category: bizDoc.category,
+            phone: bizDoc.phone,
+            email: bizDoc.email,
+            location: bizDoc.location,
+          }
+        : undefined,
+      status: userDoc?.status,
+      registeredAt: userDoc?.registeredAt,
+    };
+
+    return res.status(created ? 201 : 200).json({ registration: response });
   } catch (err: any) {
     if (err?.code === 11000) {
       // unique index conflict; fall back to fetch
@@ -68,10 +106,27 @@ export async function getRegistrationByUid(req: Request, res: Response) {
     const { firebaseUid } = req.params;
     if (!firebaseUid) return res.status(400).json({ error: 'firebaseUid param is required' });
 
-    const doc = await User.findOne({ firebaseUid });
-    if (!doc) return res.status(404).json({ error: 'Not found' });
+    const user = await User.findOne({ firebaseUid });
+    if (!user) return res.status(404).json({ error: 'Not found' });
+    const biz = await Business.findOne({ firebaseUid });
 
-    return res.json({ registration: doc });
+    const response = {
+      firebaseUid,
+      personal: user.personal,
+      business: biz
+        ? {
+            name: biz.name,
+            category: biz.category,
+            phone: biz.phone,
+            email: biz.email,
+            location: biz.location,
+          }
+        : undefined,
+      status: user.status,
+      registeredAt: user.registeredAt,
+    };
+
+    return res.json({ registration: response });
   } catch (err) {
     console.error('getRegistrationByUid error:', err);
     return res.status(500).json({ error: 'Internal server error' });
