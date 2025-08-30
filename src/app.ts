@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import registrationRoutes from './routes/registration.routes';
 import usersRoutes from './routes/users.routes';
+import meetingsRoutes from './routes/meetings.routes';
 
 const app = express();
 
@@ -21,5 +22,6 @@ app.get('/', (_req, res) => {
 // API routes
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/meetings', meetingsRoutes);
 
 export default app;
