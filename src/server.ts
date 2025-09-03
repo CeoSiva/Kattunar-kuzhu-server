@@ -3,7 +3,7 @@ import http from 'http';
 import app from './app';
 import { connectDB } from './config/db';
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001; // Changed from 5000 to 5001 to avoid conflict
 const MONGODB_URI = process.env.MONGODB_URI as string;
 
 async function start() {

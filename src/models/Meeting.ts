@@ -15,6 +15,10 @@ export interface IMeeting extends Document {
   timeString: string; // hh:mm AM/PM
   status: MeetingStatus;
   createdBy?: string; // firebaseUid or user id (optional for now)
+  // Optional geofence fields
+  locationLat?: number;
+  locationLng?: number;
+  radiusMeters?: number; // if provided, attendance can be geofenced
 }
 
 const MeetingSchema = new Schema<IMeeting>(
@@ -28,6 +32,9 @@ const MeetingSchema = new Schema<IMeeting>(
     timeString: { type: String, required: true },
     status: { type: String, enum: ['scheduled', 'completed', 'cancelled'], default: 'scheduled', index: true },
     createdBy: { type: String },
+    locationLat: { type: Number },
+    locationLng: { type: Number },
+    radiusMeters: { type: Number },
   },
   { timestamps: true, collection: 'meetings' }
 );
