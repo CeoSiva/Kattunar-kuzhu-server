@@ -3,6 +3,7 @@ import cors from 'cors';
 import registrationRoutes from './routes/registration.routes';
 import usersRoutes from './routes/users.routes';
 import meetingsRoutes from './routes/meetings.routes';
+import businessRoutes from './routes/business.routes';
 
 const app = express();
 
@@ -23,5 +24,6 @@ app.get('/', (_req, res) => {
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/meetings', meetingsRoutes);
+app.use('/api/business', businessRoutes);
 
 export default app;

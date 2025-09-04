@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { User } from '../models/User';
+import { AuthedRequest } from '../middleware/auth';
 
 export async function getStatusByPhone(req: Request, res: Response) {
   try {
@@ -16,6 +17,62 @@ export async function getStatusByPhone(req: Request, res: Response) {
     return res.json({ status: user.status });
   } catch (err) {
     console.error('getStatusByPhone error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// GET /api/users/me
+export async function getMe(req: AuthedRequest, res: Response) {
+  try {
+    const uid = req.user?.uid;
+    if (!uid) return res.status(401).json({ error: 'Unauthorized' });
+
+    const user = await User.findOne({ firebaseUid: uid });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    return res.json({
+      firebaseUid: user.firebaseUid,
+      personal: user.personal,
+      status: user.status,
+      registeredAt: user.registeredAt,
+    });
+  } catch (err) {
+    console.error('getMe error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// PUT /api/users/me
+export async function updateMe(req: AuthedRequest, res: Response) {
+  try {
+    const uid = req.user?.uid;
+    if (!uid) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { name, email, phone, groupId, profilePic } = req.body || {};
+
+    const update: any = {};
+    if (name !== undefined) update['personal.name'] = String(name).trim();
+    if (email !== undefined) update['personal.email'] = email ? String(email).trim().toLowerCase() : undefined;
+    if (phone !== undefined) update['personal.phone'] = String(phone).trim();
+    if (groupId !== undefined) update['personal.groupId'] = String(groupId).trim();
+    if (profilePic !== undefined) update['personal.profilePic'] = String(profilePic).trim();
+
+    const user = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $set: update },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    return res.json({
+      firebaseUid: user.firebaseUid,
+      personal: user.personal,
+      status: user.status,
+      registeredAt: user.registeredAt,
+    });
+  } catch (err) {
+    console.error('updateMe error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
