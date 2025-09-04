@@ -21,6 +21,12 @@ export interface IBusiness extends Document {
     linkedin?: string;
   };
   gallery?: string[];
+  products?: Array<{
+    id?: string;
+    title: string;
+    description?: string;
+    imageUri?: string;
+  }>;
 }
 
 const BusinessSchema = new Schema<IBusiness>(
@@ -52,6 +58,17 @@ const BusinessSchema = new Schema<IBusiness>(
       linkedin: { type: String, trim: true },
     },
     gallery: [{ type: String, trim: true }],
+    products: [
+      new Schema(
+        {
+          id: { type: String, trim: true },
+          title: { type: String, required: true, trim: true },
+          description: { type: String, trim: true },
+          imageUri: { type: String, trim: true },
+        },
+        { _id: false }
+      ),
+    ],
   },
   { timestamps: true, collection: 'businesses' }
 );

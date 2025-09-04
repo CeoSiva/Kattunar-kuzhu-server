@@ -36,6 +36,7 @@ export async function updateMyBusiness(req: AuthedRequest, res: Response) {
       hours,
       socials,
       gallery,
+      products,
     } = req.body || {};
 
     const update: any = {};
@@ -49,6 +50,21 @@ export async function updateMyBusiness(req: AuthedRequest, res: Response) {
     if (hours !== undefined) update['hours'] = Array.isArray(hours) ? hours : [];
     if (socials !== undefined) update['socials'] = socials || {};
     if (gallery !== undefined) update['gallery'] = Array.isArray(gallery) ? gallery : [];
+    if (products !== undefined) {
+      update['products'] = Array.isArray(products)
+        ? products
+            .map((p: any) => {
+              const title = typeof p?.title === 'string' ? p.title.trim() : '';
+              if (!title) return null; // skip invalid
+              const item: any = { title };
+              if (p?.id) item.id = String(p.id).trim();
+              if (typeof p?.description === 'string' && p.description.trim()) item.description = p.description.trim();
+              if (typeof p?.imageUri === 'string' && p.imageUri.trim()) item.imageUri = p.imageUri.trim();
+              return item;
+            })
+            .filter(Boolean)
+        : [];
+    }
 
     const business = await Business.findOneAndUpdate(
       { firebaseUid: uid },
