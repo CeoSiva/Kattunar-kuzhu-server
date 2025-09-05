@@ -38,6 +38,7 @@ const UserSchema = new Schema<IUser>(
 
 UserSchema.index({ 'personal.email': 1 }, { partialFilterExpression: { 'personal.email': { $exists: true } } });
 UserSchema.index({ 'personal.phone': 1 });
+UserSchema.index({ 'personal.name': 1 });
 
 export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

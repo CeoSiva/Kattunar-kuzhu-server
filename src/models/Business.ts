@@ -74,6 +74,7 @@ const BusinessSchema = new Schema<IBusiness>(
 );
 
 BusinessSchema.index({ category: 1 });
+BusinessSchema.index({ name: 1 });
 
 export const Business: Model<IBusiness> =
   mongoose.models.Business || mongoose.model<IBusiness>('Business', BusinessSchema);
