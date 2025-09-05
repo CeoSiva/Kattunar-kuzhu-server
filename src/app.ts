@@ -5,6 +5,7 @@ import usersRoutes from './routes/users.routes';
 import meetingsRoutes from './routes/meetings.routes';
 import businessRoutes from './routes/business.routes';
 import searchRoutes from './routes/search.routes';
+import oneOnOneRoutes from './routes/oneonone.routes';
 
 const app = express();
 
@@ -27,5 +28,6 @@ app.use('/api/users', usersRoutes);
 app.use('/api/meetings', meetingsRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/oneonone', oneOnOneRoutes);
 
 export default app;
