@@ -18,6 +18,20 @@ export async function getMyBusiness(req: AuthedRequest, res: Response) {
   }
 }
 
+// GET /api/business/by-uid?uid=<firebaseUid>
+export async function getBusinessByUid(req: any, res: Response) {
+  try {
+    const uid = String(req.query?.uid || '').trim();
+    if (!uid) return res.status(400).json({ error: 'uid is required' });
+    const business = await Business.findOne({ firebaseUid: uid });
+    if (!business) return res.status(404).json({ error: 'Business not found' });
+    return res.json(business);
+  } catch (err) {
+    console.error('getBusinessByUid error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 // PUT /api/business/me
 export async function updateMyBusiness(req: AuthedRequest, res: Response) {
   try {
