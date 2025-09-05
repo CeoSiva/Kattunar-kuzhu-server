@@ -11,6 +11,13 @@ export interface IBusiness extends Document {
   logoUrl?: string;
   coverUrl?: string;
   description?: string;
+  locationDetails?: {
+    placeId?: string;
+    city?: string;
+    address?: string;
+    location?: { lat: number; lng: number };
+    createdAt?: Date;
+  };
   hours?: Array<{ day: string; open: string; close: string; closed?: boolean }>;
   socials?: {
     website?: string;
@@ -41,6 +48,16 @@ const BusinessSchema = new Schema<IBusiness>(
     logoUrl: { type: String, trim: true },
     coverUrl: { type: String, trim: true },
     description: { type: String, trim: true },
+    locationDetails: {
+      placeId: { type: String, trim: true },
+      city: { type: String, trim: true },
+      address: { type: String, trim: true },
+      location: {
+        lat: { type: Number },
+        lng: { type: Number },
+      },
+      createdAt: { type: Date },
+    },
     hours: [
       {
         day: { type: String, required: true },

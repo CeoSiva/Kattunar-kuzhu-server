@@ -44,6 +44,7 @@ export async function updateMyBusiness(req: AuthedRequest, res: Response) {
       phone,
       email,
       location,
+      locationDetails,
       description,
       logoUrl,
       coverUrl,
@@ -59,6 +60,20 @@ export async function updateMyBusiness(req: AuthedRequest, res: Response) {
     if (email !== undefined) update['email'] = email ? String(email).trim().toLowerCase() : undefined;
     if (location !== undefined) update['location'] = String(location).trim();
     if (description !== undefined) update['description'] = String(description).trim();
+    if (locationDetails !== undefined) {
+      const ld: any = {};
+      if (locationDetails?.placeId !== undefined) ld.placeId = String(locationDetails.placeId).trim();
+      if (locationDetails?.city !== undefined) ld.city = String(locationDetails.city).trim();
+      if (locationDetails?.address !== undefined) ld.address = String(locationDetails.address).trim();
+      if (locationDetails?.location && typeof locationDetails.location.lat === 'number' && typeof locationDetails.location.lng === 'number') {
+        ld.location = { lat: Number(locationDetails.location.lat), lng: Number(locationDetails.location.lng) };
+      }
+      if (locationDetails?.createdAt) {
+        const d = new Date(locationDetails.createdAt);
+        if (!isNaN(d.getTime())) ld.createdAt = d;
+      }
+      update['locationDetails'] = ld;
+    }
     if (logoUrl !== undefined) update['logoUrl'] = String(logoUrl).trim();
     if (coverUrl !== undefined) update['coverUrl'] = String(coverUrl).trim();
     if (hours !== undefined) update['hours'] = Array.isArray(hours) ? hours : [];
