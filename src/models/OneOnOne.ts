@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-export type OneOnOneStatus = 'scheduled' | 'completed' | 'cancelled';
+export type OneOnOneStatus = 'pending' | 'scheduled' | 'completed' | 'cancelled';
 
 export interface IOneOnOne extends Document {
   title: string;
@@ -17,6 +17,20 @@ export interface IOneOnOne extends Document {
   requestedUid: string; // who is being requested
   // Optional: track who created it
   createdBy?: string; // firebaseUid
+  // Optional reschedule proposal info
+  proposal?: {
+    dateString?: string;
+    timeString?: string;
+    location?: string;
+    proposedByUid: string;
+    proposedAt: Date;
+    status: 'pending' | 'accepted' | 'rejected';
+    note?: string;
+  };
+  lastActionAt?: Date;
+  // Completion proof (selfie/photo) and timestamp
+  proofPhotoUrl?: string;
+  completedAt?: Date;
 }
 
 const OneOnOneSchema = new Schema<IOneOnOne>(
@@ -27,10 +41,22 @@ const OneOnOneSchema = new Schema<IOneOnOne>(
     startsAt: { type: Date, required: true, index: true },
     dateString: { type: String, required: true },
     timeString: { type: String, required: true },
-    status: { type: String, enum: ['scheduled', 'completed', 'cancelled'], default: 'scheduled', index: true },
+    status: { type: String, enum: ['pending', 'scheduled', 'completed', 'cancelled'], default: 'pending', index: true },
     requesterUid: { type: String, required: true, index: true },
     requestedUid: { type: String, required: true, index: true },
     createdBy: { type: String },
+    proposal: {
+      dateString: { type: String },
+      timeString: { type: String },
+      location: { type: String },
+      proposedByUid: { type: String },
+      proposedAt: { type: Date },
+      status: { type: String, enum: ['pending', 'accepted', 'rejected'] },
+      note: { type: String },
+    },
+    lastActionAt: { type: Date },
+    proofPhotoUrl: { type: String },
+    completedAt: { type: Date },
   },
   { timestamps: true, collection: 'one_on_one_meetings' }
 );

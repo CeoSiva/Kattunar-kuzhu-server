@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getStatusByPhone, getMe, updateMe } from '../controllers/users.controller';
+import { getStatusByPhone, getMe, updateMe, getUserPublicByUid } from '../controllers/users.controller';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
@@ -8,6 +8,7 @@ const router = Router();
 router.get('/status', getStatusByPhone);
 
 // Authenticated user routes
+router.get('/by-uid', authMiddleware, getUserPublicByUid);
 router.get('/me', authMiddleware, getMe);
 router.put('/me', authMiddleware, updateMe);
 

@@ -25,6 +25,179 @@ function parseDateTime(dateStr: string, timeStr: string): Date | null {
   return isNaN(dt.getTime()) ? null : dt;
 }
 
+// PATCH /api/oneonone/:id/complete
+export async function completeOneOnOne(req: AuthedRequest, res: Response) {
+  try {
+    if (!req.user?.uid) return res.status(401).json({ error: 'Unauthenticated' });
+    const uid = req.user.uid;
+    const { id } = req.params as { id: string };
+    const { proofUrl } = req.body as { proofUrl?: string };
+    if (!id) return res.status(400).json({ error: 'id is required' });
+    if (!proofUrl) return res.status(400).json({ error: 'proofUrl is required' });
+
+    const doc = await OneOnOne.findById(id);
+    if (!doc) return res.status(404).json({ error: 'One-on-one not found' });
+
+    // Only requester can complete, and only if scheduled and start time reached
+    if (doc.requesterUid !== uid) {
+      return res.status(403).json({ error: 'Only the requester can complete this one-on-one' });
+    }
+    if (doc.status !== 'scheduled') {
+      return res.status(400).json({ error: 'Only scheduled one-on-ones can be completed' });
+    }
+    const now = new Date();
+    if (now.getTime() < new Date(doc.startsAt).getTime()) {
+      return res.status(400).json({ error: 'Cannot complete before the scheduled start time' });
+    }
+
+    doc.proofPhotoUrl = String(proofUrl);
+    doc.completedAt = new Date();
+    doc.status = 'completed';
+    doc.lastActionAt = new Date();
+    await doc.save();
+    return res.json({ oneOnOne: doc });
+  } catch (err) {
+    console.error('completeOneOnOne error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// PATCH /api/oneonone/:id/reschedule
+export async function requestReschedule(req: AuthedRequest, res: Response) {
+  try {
+    if (!req.user?.uid) return res.status(401).json({ error: 'Unauthenticated' });
+    const uid = req.user.uid;
+    const { id } = req.params as { id: string };
+    const { date, time, location, note } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'id is required' });
+    if (!date && !time && !location) return res.status(400).json({ error: 'At least one of date, time, or location is required' });
+
+    const doc = await OneOnOne.findById(id);
+    if (!doc) return res.status(404).json({ error: 'One-on-one not found' });
+    // Only participants may propose
+    if (doc.requestedUid !== uid && doc.requesterUid !== uid) {
+      return res.status(403).json({ error: 'Not authorized to propose reschedule' });
+    }
+
+    const proposal: any = {
+      proposedByUid: uid,
+      proposedAt: new Date(),
+      status: 'pending',
+    };
+    if (date) proposal.dateString = String(date).trim();
+    if (time) proposal.timeString = String(time).trim();
+    if (location) proposal.location = String(location).trim();
+    if (note) proposal.note = String(note).trim();
+
+    doc.proposal = proposal;
+    doc.lastActionAt = new Date();
+    await doc.save();
+    return res.json({ oneOnOne: doc });
+  } catch (err) {
+    console.error('requestReschedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// PATCH /api/oneonone/:id/reschedule/accept
+export async function acceptReschedule(req: AuthedRequest, res: Response) {
+  try {
+    if (!req.user?.uid) return res.status(401).json({ error: 'Unauthenticated' });
+    const uid = req.user.uid;
+    const { id } = req.params as { id: string };
+    if (!id) return res.status(400).json({ error: 'id is required' });
+
+    const doc = await OneOnOne.findById(id);
+    if (!doc) return res.status(404).json({ error: 'One-on-one not found' });
+    if (!doc.proposal || doc.proposal.status !== 'pending') {
+      return res.status(400).json({ error: 'No pending proposal to accept' });
+    }
+    // Only the counterparty to proposedByUid may accept
+    const counterParty = doc.proposal.proposedByUid === doc.requestedUid ? doc.requesterUid : doc.requestedUid;
+    if (uid !== counterParty) {
+      return res.status(403).json({ error: 'Not authorized to accept this proposal' });
+    }
+
+    // Apply proposed changes where present
+    const nextDate = doc.proposal.dateString || doc.dateString;
+    const nextTime = doc.proposal.timeString || doc.timeString;
+    const nextLocation = doc.proposal.location || doc.location;
+    const nextStartsAt = parseDateTime(nextDate, nextTime);
+    if (!nextStartsAt) return res.status(400).json({ error: 'Invalid proposed date/time' });
+
+    doc.dateString = nextDate;
+    doc.timeString = nextTime;
+    doc.location = nextLocation;
+    doc.startsAt = nextStartsAt;
+    doc.status = 'scheduled';
+    doc.proposal.status = 'accepted';
+    doc.lastActionAt = new Date();
+    await doc.save();
+    return res.json({ oneOnOne: doc });
+  } catch (err) {
+    console.error('acceptReschedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// PATCH /api/oneonone/:id/reschedule/reject
+export async function rejectReschedule(req: AuthedRequest, res: Response) {
+  try {
+    if (!req.user?.uid) return res.status(401).json({ error: 'Unauthenticated' });
+    const uid = req.user.uid;
+    const { id } = req.params as { id: string };
+    if (!id) return res.status(400).json({ error: 'id is required' });
+
+    const doc = await OneOnOne.findById(id);
+    if (!doc) return res.status(404).json({ error: 'One-on-one not found' });
+    if (!doc.proposal || doc.proposal.status !== 'pending') {
+      return res.status(400).json({ error: 'No pending proposal to reject' });
+    }
+    // Only the counterparty to proposedByUid may reject
+    const counterParty = doc.proposal.proposedByUid === doc.requestedUid ? doc.requesterUid : doc.requestedUid;
+    if (uid !== counterParty) {
+      return res.status(403).json({ error: 'Not authorized to reject this proposal' });
+    }
+
+    doc.proposal.status = 'rejected';
+    doc.lastActionAt = new Date();
+    await doc.save();
+    return res.json({ oneOnOne: doc });
+  } catch (err) {
+    console.error('rejectReschedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+// PATCH /api/oneonone/:id/approve
+export async function approveOneOnOne(req: AuthedRequest, res: Response) {
+  try {
+    if (!req.user?.uid) {
+      return res.status(401).json({ error: 'Unauthenticated' });
+    }
+    const uid = req.user.uid;
+    const { id } = req.params as { id: string };
+    if (!id) return res.status(400).json({ error: 'id is required' });
+
+    const doc = await OneOnOne.findById(id);
+    if (!doc) return res.status(404).json({ error: 'One-on-one not found' });
+
+    if (doc.status !== 'pending') {
+      return res.status(400).json({ error: 'Only pending one-on-ones can be approved' });
+    }
+
+    if (doc.requestedUid !== uid) {
+      return res.status(403).json({ error: 'Only the requested member can approve this one-on-one' });
+    }
+
+    doc.status = 'scheduled';
+    await doc.save();
+    return res.json({ oneOnOne: doc });
+  } catch (err) {
+    console.error('approveOneOnOne error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 export async function createOneOnOne(req: AuthedRequest, res: Response) {
   try {
     if (!req.user?.uid) {
@@ -53,7 +226,7 @@ export async function createOneOnOne(req: AuthedRequest, res: Response) {
       startsAt,
       dateString: String(date).trim(),
       timeString: String(time).trim(),
-      status: 'scheduled',
+      status: 'pending',
       requesterUid: req.user.uid,
       requestedUid: String(requestedUid).trim(),
       createdBy: req.user.uid,
@@ -88,6 +261,68 @@ export async function listMyOneOnOnes(req: AuthedRequest, res: Response) {
     return res.json({ items });
   } catch (err) {
     console.error('listMyOneOnOnes error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function listReceivedRequests(req: AuthedRequest, res: Response) {
+  try {
+    if (!req.user?.uid) {
+      return res.status(401).json({ error: 'Unauthenticated' });
+    }
+    const uid = req.user.uid;
+    const { status } = req.query as { status?: string };
+    const statusFilter = status && ['pending', 'scheduled', 'completed', 'cancelled'].includes(status)
+      ? { status }
+      : {};
+    const items = await OneOnOne.find({
+      $and: [
+        statusFilter,
+        {
+          $or: [
+            { requestedUid: uid },
+            // Legacy compatibility
+            { participantBUid: uid as any },
+          ],
+        },
+      ],
+    })
+      .sort({ startsAt: -1 })
+      .limit(200);
+    return res.json({ items });
+  } catch (err) {
+    console.error('listReceivedRequests error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function listSentRequests(req: AuthedRequest, res: Response) {
+  try {
+    if (!req.user?.uid) {
+      return res.status(401).json({ error: 'Unauthenticated' });
+    }
+    const uid = req.user.uid;
+    const { status } = req.query as { status?: string };
+    const statusFilter = status && ['pending', 'scheduled', 'completed', 'cancelled'].includes(status)
+      ? { status }
+      : {};
+    const items = await OneOnOne.find({
+      $and: [
+        statusFilter,
+        {
+          $or: [
+            { requesterUid: uid },
+            // Legacy compatibility
+            { participantAUid: uid as any },
+          ],
+        },
+      ],
+    })
+      .sort({ startsAt: -1 })
+      .limit(200);
+    return res.json({ items });
+  } catch (err) {
+    console.error('listSentRequests error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
