@@ -6,6 +6,7 @@ import meetingsRoutes from './routes/meetings.routes';
 import businessRoutes from './routes/business.routes';
 import searchRoutes from './routes/search.routes';
 import oneOnOneRoutes from './routes/oneonone.routes';
+import requirementsRoutes from './routes/requirements.routes';
 
 const app = express();
 
@@ -29,5 +30,6 @@ app.use('/api/meetings', meetingsRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/oneonone', oneOnOneRoutes);
+app.use('/api/requirements', requirementsRoutes);
 
 export default app;
