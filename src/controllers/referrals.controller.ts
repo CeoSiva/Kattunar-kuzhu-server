@@ -64,6 +64,28 @@ export async function createReferral(req: AuthedRequest, res: Response) {
   }
 }
 
+// PATCH /api/referrals/:id/request-thank
+export async function requestThankNote(req: AuthedRequest, res: Response) {
+  try {
+    const uid = req.user?.uid;
+    if (!uid) return res.status(401).json({ error: 'Unauthorized' });
+    const id = String(req.params.id || '');
+    const doc = await Referral.findById(id);
+    if (!doc) return res.status(404).json({ error: 'Referral not found' });
+    // Only the giver can request a thank note
+    if (doc.giverUid !== uid) return res.status(403).json({ error: 'Forbidden' });
+    if (doc.status !== 'confirmed') return res.status(400).json({ error: 'Thank note can be requested only for confirmed referrals' });
+    // Record the request and bump reminders
+    doc.thankNoteRequestedAt = new Date();
+    doc.thankNoteReminderCount = (doc.thankNoteReminderCount || 0) + 1;
+    await doc.save();
+    return res.json(doc.toObject());
+  } catch (err) {
+    console.error('requestThankNote error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 // PATCH /api/referrals/:id/confirm
 export async function confirmReferral(req: AuthedRequest, res: Response) {
   try {

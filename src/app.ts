@@ -7,6 +7,7 @@ import businessRoutes from './routes/business.routes';
 import searchRoutes from './routes/search.routes';
 import oneOnOneRoutes from './routes/oneonone.routes';
 import referralsRoutes from './routes/referrals.routes';
+import statsRoutes from './routes/stats.routes';
 import requirementsRoutes from './routes/requirements.routes';
 
 const app = express();
@@ -33,5 +34,6 @@ app.use('/api/search', searchRoutes);
 app.use('/api/oneonone', oneOnOneRoutes);
 app.use('/api/requirements', requirementsRoutes);
 app.use('/api/referrals', referralsRoutes);
+app.use('/api/stats', statsRoutes);
 
 export default app;

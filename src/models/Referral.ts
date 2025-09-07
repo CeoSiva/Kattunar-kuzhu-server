@@ -19,6 +19,8 @@ export interface IReferral extends Document {
   attachments?: { name?: string; url: string }[];
   thankNoteMessage?: string;
   thankNoteAmount?: number;
+  thankNoteRequestedAt?: Date;
+  thankNoteReminderCount?: number;
   status: ReferralStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +56,8 @@ const ReferralSchema = new Schema<IReferral>(
     attachments: { type: [AttachmentSchema], default: [] },
     thankNoteMessage: { type: String, trim: true },
     thankNoteAmount: { type: Number, min: 0 },
+    thankNoteRequestedAt: { type: Date },
+    thankNoteReminderCount: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: ['pending', 'confirmed', 'completed', 'cancelled'], default: 'pending', index: true },
   },
   { timestamps: true, collection: 'referrals' }
