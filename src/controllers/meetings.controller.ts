@@ -67,7 +67,7 @@ export async function createMeeting(req: Request, res: Response) {
 
 export async function listMeetings(req: Request, res: Response) {
   try {
-    const { status, type } = req.query as { status?: string; type?: string };
+    const { status, type, upcoming, limit } = req.query as { status?: string; type?: string; upcoming?: string; limit?: string };
 
     const query: any = {};
     if (status && ['scheduled', 'completed', 'cancelled'].includes(status)) {
@@ -76,8 +76,14 @@ export async function listMeetings(req: Request, res: Response) {
     if (type && ['general', 'special', 'training'].includes(type)) {
       query.meetingType = type;
     }
+    // Upcoming filter: scheduled meetings starting from now
+    if (String(upcoming).toLowerCase() === 'true') {
+      query.status = 'scheduled';
+      query.startsAt = { $gte: new Date() };
+    }
 
-    const items = await Meeting.find(query).sort({ startsAt: 1 }).limit(200);
+    const lim = Math.min(Math.max(parseInt(String(limit || '10'), 10) || 10, 1), 100);
+    const items = await Meeting.find(query).sort({ startsAt: 1 }).limit(lim);
     return res.json({ meetings: items });
   } catch (err) {
     console.error('listMeetings error:', err);
